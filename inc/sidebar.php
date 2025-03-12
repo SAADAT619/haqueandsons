@@ -292,7 +292,7 @@
             <ul class="nav nav-treeview">
               <li class="nav-item">
                 <a href="index.php?page=backup_database" class="nav-link <?php echo $actual_link=='backup_database'?'active':'';?>">
-                  <!-- <i class="far fa-circle nav-icon"></i> -->
+                  <i class="far fa-circle nav-icon"></i>
                   <p>Backup database</p>
                 </a>
               </li>

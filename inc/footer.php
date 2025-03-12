@@ -58,7 +58,7 @@ onReady(function () {
 <script src="dist/js/pages/dashboard2.js"></script>
 <script src="assets/js/custom.js"></script>
 <script src="assets/js/ajax_req.js"></script>
-<script src="assets/js/buy_product.js"></script>
+<!-- <script src="assets/js/buy_product.js"></script> -->
 <script>
   $(document).ready(function(){
     $('.dropdown-submenu a.test').on("click", function(e){
