@@ -60,10 +60,9 @@ if ($Ouser->is_login() != false) {
 					</div>
 				</form>
 
-				<!-- <div class="new-account mt-2 tag">
-					<b>If you have any requirement related to Project Development : <a href="https://mayurik.com">Click here</a></b>
-					</p>
-				</div> -->
+				<div class="new-account mt-2 tag">
+					<p>Copyright &#169; and developed by Saadat and Rafi IT LTD. </p>
+				</div>
 			</div>
 		</div>
 		<div class="col-lg-6">
