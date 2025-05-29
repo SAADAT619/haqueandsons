@@ -6,7 +6,7 @@ if (!isset($conn)) {
 if (!function_exists('getShopSetting')) {
     include '../core/functions.php';
 }
-$shopName = getShopSetting('shop_name', $conn) ?: 'Cement Shop Inventory';
+$shopName = getShopSetting('shop_name', $conn) ?: 'Haque&Sons';
 ?>
 
 <!DOCTYPE html>

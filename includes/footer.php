@@ -5,7 +5,7 @@
     </div> <!-- Close content div -->
     </div> <!-- Close container div -->
     <footer class="footer">
-        <p>© <?php echo date("Y"); ?> Rahela Technologies LTD.</p>
+        <p>© <?php echo date("Y"); ?> Rahela Solutions LTD.</p>
     </footer>
 </body>
 </html>
