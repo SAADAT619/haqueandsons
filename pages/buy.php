@@ -246,50 +246,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['update_purchase'])) 
     }
 }
 
-// Process delete request
-if (isset($_GET['delete_id'])) {
-    $delete_id = filter_input(INPUT_GET, 'delete_id', FILTER_VALIDATE_INT);
-    if ($delete_id) {
-        $conn->begin_transaction();
-        try {
-            // Fetch the invoice number to delete from legacy table
-            $invoiceSql = "SELECT invoice_number FROM purchase_headers WHERE id = ?";
-            $invoiceStmt = $conn->prepare($invoiceSql);
-            $invoiceStmt->bind_param("i", $delete_id);
-            $invoiceStmt->execute();
-            $invoiceResult = $invoiceStmt->get_result();
-            if ($invoiceResult->num_rows > 0) {
-                $invoice_number = $invoiceResult->fetch_assoc()['invoice_number'];
-
-                // Delete from purchase_headers (will cascade to purchase_items due to ON DELETE CASCADE)
-                $deleteSql = "DELETE FROM purchase_headers WHERE id = ?";
-                $deleteStmt = $conn->prepare($deleteSql);
-                $deleteStmt->bind_param("i", $delete_id);
-                if (!$deleteStmt->execute()) {
-                    throw new Exception("Error deleting purchase: " . $deleteStmt->error);
-                }
-
-                // Delete from purchases (legacy table) for the same invoice
-                $deleteLegacySql = "DELETE FROM purchases WHERE invoice_number = ?";
-                $deleteLegacyStmt = $conn->prepare($deleteLegacySql);
-                $deleteLegacyStmt->bind_param("s", $invoice_number);
-                if (!$deleteLegacyStmt->execute()) {
-                    throw new Exception("Error deleting legacy purchase: " . $deleteLegacyStmt->error);
-                }
-            } else {
-                throw new Exception("Purchase not found.");
-            }
-
-            $conn->commit();
-            $success = "Purchase deleted successfully.";
-            $purchaseListResult = $conn->query($purchaseListSql);
-        } catch (Exception $e) {
-            $conn->rollback();
-            $error = $e->getMessage();
-        }
-    }
-}
-
 // Process update request
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_purchase'])) {
     $purchase_id = filter_input(INPUT_POST, 'purchase_id', FILTER_VALIDATE_INT);
@@ -721,7 +677,6 @@ if (isset($_GET['edit_id'])) {
                     <td class="created-at"><?php echo htmlspecialchars($purchase['created_at']); ?></td>
                     <td class="action-buttons">
                         <a href="buy.php?edit_id=<?php echo $purchase['id']; ?>" class="btn btn-primary">Edit</a>
-                        <a href="buy.php?delete_id=<?php echo $purchase['id']; ?>" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this purchase?');">Delete</a>
                         <a href="invoice.php?purchase_id=<?php echo $purchase['id']; ?>" class="btn btn-info">Invoice</a>
                     </td>
                 </tr>
@@ -1075,14 +1030,6 @@ th:last-child, td.action-buttons {
 
 .btn-primary:hover {
     background-color: #0056b3;
-}
-
-.btn-danger {
-    background-color: #dc3545;
-}
-
-.btn-danger:hover {
-    background-color: #c82333;
 }
 
 .btn-info {

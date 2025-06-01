@@ -48,21 +48,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } else {
             $error = "Error preparing statement: " . $conn->error;
         }
-    } elseif (isset($_POST['delete_customer'])) {
-        $id = sanitizeInput($_POST['id']);
-        $sql = "DELETE FROM customers WHERE id=?";
-        $stmt = $conn->prepare($sql);
-        if ($stmt) {
-            $stmt->bind_param("i", $id);
-            if ($stmt->execute()) {
-                $message = "Customer deleted successfully";
-            } else {
-                $error = "Error deleting customer: " . $stmt->error;
-            }
-            $stmt->close();
-        } else {
-            $error = "Error preparing statement: " . $conn->error;
-        }
     }
 }
 
@@ -189,8 +174,7 @@ $customersResult = $conn->query($customersSql);
                     echo "<td>" . htmlspecialchars($customerRow['phone'] ?? 'N/A') . "</td>";
                     echo "<td>" . htmlspecialchars($customerRow['address'] ?? 'N/A') . "</td>";
                     echo "<td>";
-                    echo "<button onclick=\"editCustomer(" . $customerRow['id'] . ", '" . addslashes(htmlspecialchars($customerRow['name'])) . "', '" . addslashes(htmlspecialchars($customerRow['phone'] ?? '')) . "', '" . addslashes(htmlspecialchars($customerRow['address'] ?? '')) . "')\">Edit</button> | ";
-                    echo "<form method='post' style='display:inline;'><input type='hidden' name='id' value='" . $customerRow['id'] . "'><button type='submit' name='delete_customer'>Delete</button></form>";
+                    echo "<button onclick=\"editCustomer(" . $customerRow['id'] . ", '" . addslashes(htmlspecialchars($customerRow['name'])) . "', '" . addslashes(htmlspecialchars($customerRow['phone'] ?? '')) . "', '" . addslashes(htmlspecialchars($customerRow['address'] ?? '')) . "')\">Edit</button>";
                     echo "</td>";
                     echo "</tr>";
                 }
