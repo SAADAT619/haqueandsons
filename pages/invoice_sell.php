@@ -48,10 +48,10 @@ if (!$saleItemsResult) {
 
 // Initialize shop details with default values
 $shopDetails = [
-    'shop_name' => 'Your Shop Name',
-    'shop_phone' => 'Your Shop Phone',
-    'shop_address' => 'Your Shop Address',
-    'email' => 'contact@yourshop.com'
+    'shop_name' => 'Demo Cement Shop',
+    'shop_phone' => '(123) 456-7890',
+    'shop_address' => '123 Demo Street, Sample City, SC 12345',
+    'email' => 'contact@demolocalshop.com'
 ];
 
 // Fetch settings from the shop_details table (assumes single row with id=1)
@@ -81,6 +81,7 @@ if ($settingsResult && $settingsResult->num_rows > 0) {
     }
 }
 
+/* Commented out shop details update functionality
 // Handle shop details update
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_shop_details'])) {
     $shop_name = isset($_POST['shop_name']) ? sanitizeInput($_POST['shop_name']) : '';
@@ -142,6 +143,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_shop_details'])
         $errorMessage = "Validation errors: " . implode("; ", $errors);
     }
 }
+*/
 ?>
 
 <!DOCTYPE html>
@@ -166,19 +168,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_shop_details'])
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
         }
         .header {
-            background-color: #2e7d32;
-            color: white;
-            padding: 20px;
             text-align: center;
-            border-radius: 15px 15px 0 0;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+        }
+        .header img.logo {
+            max-width: 120px;
+            margin-bottom: 10px;
         }
         .header h1 {
-            margin: 0;
             font-size: 28px;
+            color: #007bff;
+            margin-bottom: 5px;
         }
         .header p {
-            margin: 5px 0;
-            font-size: 16px;
+            font-size: 14px;
+            color: #666;
         }
         .shop-details {
             margin: 20px 0;
@@ -267,6 +272,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_shop_details'])
             margin-top: 40px;
             padding-top: 5px;
         }
+        .print-button {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .print-button button {
+            background-color: #1976D2;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .print-button button:hover {
+            background-color: #1565C0;
+        }
+        /* Commented out styles for edit-shop-details
         .edit-shop-details {
             margin: 30px 0;
             padding: 15px;
@@ -302,22 +324,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_shop_details'])
         .edit-shop-details button:hover {
             background-color: #45a049;
         }
-        .print-button {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .print-button button {
-            background-color: #1976D2;
-            color: white;
-            padding: 12px 25px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .print-button button:hover {
-            background-color: #1565C0;
-        }
         .error-message {
             color: #d32f2f;
             background-color: #ffebee;
@@ -326,8 +332,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_shop_details'])
             margin: 10px 0;
             font-size: 14px;
         }
+        */
         @media print {
-            .edit-shop-details, .print-button, .error-message {
+            .print-button {
                 display: none;
             }
             .invoice-container {
@@ -335,27 +342,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_shop_details'])
                 padding: 0;
             }
         }
+        @media (max-width: 600px) {
+            .invoice-container {
+                padding: 20px;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+            th, td {
+                font-size: 12px;
+                padding: 10px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="invoice-container">
         <div class="header">
-            <h1>Invoice</h1>
+            <img src="https://via.placeholder.com/120x60?text=Logo" alt="Company Logo" class="logo">
+            <h1><?php echo htmlspecialchars($shopDetails['shop_name']); ?></h1>
+            <p><?php echo htmlspecialchars($shopDetails['shop_address']); ?></p>
+            <p>Phone: <?php echo htmlspecialchars($shopDetails['shop_phone']); ?></p>
+            <p>Email: <?php echo htmlspecialchars($shopDetails['email']); ?></p>
             <p>Invoice Number: <?php echo htmlspecialchars($invoice_number); ?></p>
         </div>
-
-        <div class="shop-details">
-            <h2><?php echo htmlspecialchars($shopDetails['shop_name']); ?></h2>
-            <p>Mobile: <?php echo htmlspecialchars($shopDetails['shop_phone']); ?></p>
-            <p>Email: <?php echo htmlspecialchars($shopDetails['email']); ?></p>
-            <p>Address: <?php echo htmlspecialchars($shopDetails['shop_address']); ?></p>
-        </div>
-
-        <?php if (!empty($errorMessage)): ?>
-            <div class="error-message">
-                <?php echo htmlspecialchars($errorMessage); ?>
-            </div>
-        <?php endif; ?>
 
         <div class="invoice-details">
             <div>
@@ -413,17 +423,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_shop_details'])
                 <p class="signature-line"> </p>
                 <p><strong>Shop Representative Signature</strong></p>
             </div>
-        </div>
-
-        <div class="edit-shop-details">
-            <h3>Edit Shop Details</h3>
-            <form method="post">
-                <input type="text" name="shop_name" value="<?php echo htmlspecialchars($shopDetails['shop_name']); ?>" placeholder="Shop Name" required>
-                <input type="text" name="shop_phone" value="<?php echo htmlspecialchars($shopDetails['shop_phone']); ?>" placeholder="Shop Phone" required>
-                <input type="email" name="shop_email" value="<?php echo htmlspecialchars($shopDetails['email']); ?>" placeholder="Shop Email" required>
-                <textarea name="shop_address" placeholder="Shop Address" required><?php echo htmlspecialchars($shopDetails['shop_address']); ?></textarea>
-                <button type="submit" name="update_shop_details">Update Shop Details</button>
-            </form>
         </div>
 
         <div class="print-button">

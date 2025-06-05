@@ -317,7 +317,7 @@ DELIMITER ;
 
 -- Insert default shop details
 INSERT INTO shop_details (id, shop_name, address, phone, email) VALUES
-(1, 'Gemini Cement Store', '123 Business Avenue, City, Country', '+123-456-7890', 'contact@geminicement.com');
+(1, 'Demo Cement Store', '123 Business Avenue, City, Country', '+123-456-7890', 'contact@democement.com');
 
 -- Insert payment methods
 INSERT INTO payment_methods (method) VALUES 

@@ -9,7 +9,7 @@ include '../core/functions.php';
 include '../includes/header.php';
 include '../includes/sidebar.php';
 
-// Handle seller creation, update, and deletion
+// Handle seller creation and update
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['add_seller'])) {
         $name = sanitizeInput($_POST['name']);
@@ -32,14 +32,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $message = "Seller updated successfully";
         } else {
             $error = "Error updating seller: " . $conn->error;
-        }
-    } elseif (isset($_POST['delete_seller'])) {
-        $id = sanitizeInput($_POST['id']);
-        $sql = "DELETE FROM sellers WHERE id=$id";
-        if ($conn->query($sql) === TRUE) {
-            $message = "Seller deleted successfully";
-        } else {
-            $error = "Error deleting seller: " . $conn->error;
         }
     }
 }
@@ -85,8 +77,7 @@ $sellerResult = $conn->query($sellerSql);
                 echo "<td>" . htmlspecialchars($sellerRow['phone']) . "</td>";
                 echo "<td>" . htmlspecialchars($sellerRow['address']) . "</td>";
                 echo "<td>";
-                echo "<button onclick=\"editSeller(" . $sellerRow['id'] . ", '" . htmlspecialchars($sellerRow['name']) . "', '" . htmlspecialchars($sellerRow['phone']) . "', '" . htmlspecialchars($sellerRow['address']) . "')\">Edit</button> | ";
-                echo "<form method='post' style='display:inline;'><input type='hidden' name='id' value='" . $sellerRow['id'] . "'><button type='submit' name='delete_seller'>Delete</button></form>";
+                echo "<button onclick=\"editSeller(" . $sellerRow['id'] . ", '" . htmlspecialchars($sellerRow['name']) . "', '" . htmlspecialchars($sellerRow['phone']) . "', '" . htmlspecialchars($sellerRow['address']) . "')\">Edit</button>";
                 echo "</td>";
                 echo "</tr>";
             }
@@ -155,14 +146,6 @@ button {
 
 button:hover {
     background-color: #45a049;
-}
-
-button[type="submit"][name="delete_seller"] {
-    background-color: #d32f2f;
-}
-
-button[type="submit"][name="delete_seller"]:hover {
-    background-color: #b71c1c;
 }
 
 /* Table styling */

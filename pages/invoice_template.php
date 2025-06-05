@@ -132,8 +132,10 @@
         <div class="header">
             <!-- Replace with your actual logo path -->
             <img src="https://via.placeholder.com/120x60?text=Logo" alt="Company Logo" class="logo">
-            <h1><?php echo getShopSetting('shop_name', $conn) ?: 'Cement Shop'; ?></h1>
-            <p><?php echo getShopSetting('shop_address', $conn) ?: '123 Cement Road, City'; ?></p>
+            <h1>Demo Cement Shop</h1>
+            <p>123 Demo Street, Sample City, SC 12345</p>
+            <p>Phone: (123) 456-7890</p>
+            <p>Email: contact@demolocalshop.com</p>
             <p>Invoice #<?php echo $invoice_number; ?></p>
         </div>
         <div class="details">

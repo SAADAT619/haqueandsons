@@ -24,28 +24,6 @@ if ($purchase_id === false || $purchase_id <= 0) {
     die("Invalid purchase ID.");
 }
 
-// Handle shop details update
-$updateSuccess = null;
-$updateError = null;
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_shop_details'])) {
-    $shop_name = filter_input(INPUT_POST, 'shop_name', FILTER_SANITIZE_STRING);
-    $phone = filter_input(INPUT_POST, 'phone', FILTER_SANITIZE_STRING);
-    $address = filter_input(INPUT_POST, 'address', FILTER_SANITIZE_STRING);
-
-    if (empty($shop_name) || empty($phone) || empty($address)) {
-        $updateError = "All fields are required.";
-    } else {
-        $updateSql = "UPDATE shop_details SET shop_name = ?, phone = ?, address = ? WHERE id = 1";
-        $updateStmt = $conn->prepare($updateSql);
-        $updateStmt->bind_param("sss", $shop_name, $phone, $address);
-        if ($updateStmt->execute()) {
-            $updateSuccess = "Shop details updated successfully.";
-        } else {
-            $updateError = "Error updating shop details: " . $conn->error;
-        }
-    }
-}
-
 // Fetch purchase details from purchase_headers
 $purchaseSql = "SELECT ph.*, s.name as seller_name, s.phone as seller_phone, s.address as seller_address, pm.method as payment_method
                 FROM purchase_headers ph
@@ -88,14 +66,39 @@ if ($shopResult === false) {
 }
 
 $shop = $shopResult->num_rows > 0 ? $shopResult->fetch_assoc() : [
-    'shop_name' => 'Gemini Cement Store',
-    'address' => '123 Business Avenue, City, Country',
-    'phone' => '+123-456-7890',
-    'email' => 'contact@geminicement.com'
+    'shop_name' => 'Demo Cement Shop',
+    'address' => '123 Demo Street, Sample City, SC 12345',
+    'phone' => '(123) 456-7890',
+    'email' => 'contact@demolocalshop.com'
 ];
+
+// Commented out shop details update functionality
+/*
+$updateSuccess = null;
+$updateError = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_shop_details'])) {
+    $shop_name = filter_input(INPUT_POST, 'shop_name', FILTER_SANITIZE_STRING);
+    $phone = filter_input(INPUT_POST, 'phone', FILTER_SANITIZE_STRING);
+    $address = filter_input(INPUT_POST, 'address', FILTER_SANITIZE_STRING);
+
+    if (empty($shop_name) || empty($phone) || empty($address)) {
+        $updateError = "All fields are required.";
+    } else {
+        $updateSql = "UPDATE shop_details SET shop_name = ?, phone = ?, address = ? WHERE id = 1";
+        $updateStmt = $conn->prepare($updateSql);
+        $updateStmt->bind_param("sss", $shop_name, $phone, $address);
+        if ($updateStmt->execute()) {
+            $updateSuccess = "Shop details updated successfully.";
+        } else {
+            $updateError = "Error updating shop details: " . $conn->error;
+        }
+    }
+}
+*/
 ?>
 
 <div class="container">
+    <!-- Commented out edit shop details form
     <div class="edit-shop-details">
         <h3>Edit Shop Details</h3>
         <?php if (isset($updateSuccess)) { ?>
@@ -124,6 +127,7 @@ $shop = $shopResult->num_rows > 0 ? $shopResult->fetch_assoc() : [
             <a href="buy.php" class="btn btn-secondary">Back to Purchase List</a>
         </form>
     </div>
+    -->
 
     <div class="invoice">
         <h2>Invoice</h2>
@@ -135,7 +139,7 @@ $shop = $shopResult->num_rows > 0 ? $shopResult->fetch_assoc() : [
         </div>
 
         <div class="invoice-details">
-            <div class="invoice-info">
+            <div class="billed-to">
                 <h3>Invoice Number: <?php echo htmlspecialchars($invoice_number); ?></h3>
                 <p>Date: <?php echo htmlspecialchars(date('d M Y', strtotime($purchase['purchase_date']))); ?></p>
             </div>
@@ -207,18 +211,19 @@ $shop = $shopResult->num_rows > 0 ? $shopResult->fetch_assoc() : [
     margin: 20px auto;
 }
 
-.edit-shop-details {
-    flex: 1;
-    background-color: #f9f9f9;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
 .invoice {
     flex: 2;
     background-color: #fff;
     padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Commented out styles for edit-shop-details
+.edit-shop-details {
+    flex: 1;
+    background-color: #f9f9f9;
+    padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
@@ -244,19 +249,6 @@ $shop = $shopResult->num_rows > 0 ? $shopResult->fetch_assoc() : [
     resize: vertical;
 }
 
-button[type="submit"] {
-    background-color: #4CAF50;
-    color: white;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-button[type="submit"]:hover {
-    background-color: #45a049;
-}
-
 .error {
     color: #d32f2f;
     background-color: #ffebee;
@@ -271,6 +263,20 @@ button[type="submit"]:hover {
     padding: 10px;
     border-radius: 4px;
     margin-bottom: 20px;
+}
+*/
+
+button[type="submit"] {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button[type="submit"]:hover {
+    background-color: #45a049;
 }
 
 .invoice-header {
@@ -289,11 +295,11 @@ button[type="submit"]:hover {
     margin-bottom: 30px;
 }
 
-.invoice-info, .seller-info {
+.billed-to, .seller-info {
     width: 48%;
 }
 
-.invoice-info h3, .seller-info h3 {
+.billed-to h3, .seller-info h3 {
     margin-top: 0;
     font-size: 18px;
 }
@@ -393,9 +399,6 @@ button:hover {
 @media print {
     .container {
         display: block;
-    }
-    .edit-shop-details {
-        display: none;
     }
     .invoice {
         box-shadow: none;
