@@ -19,93 +19,76 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } else {
             $error = "Error adding category: " . $conn->error;
         }
-    } elseif (isset($_POST['update_category'])) {
-        $id = sanitizeInput($_POST['id']);
-        $name = sanitizeInput($_POST['name']);
-        $sql = "UPDATE categories SET name='$name' WHERE id=$id";
-        if ($conn->query($sql) === TRUE) {
-            $message = "Category updated successfully";
+    }
+}
+
+// Handle product form submissions
+if (isset($_POST['add_product'])) {
+    $category_id = sanitizeInput($_POST['category_id']);
+    $name = sanitizeInput($_POST['name']);
+    $brand_name = sanitizeInput($_POST['brand_name']);
+    $type = sanitizeInput($_POST['type']);
+    $price = floatval(sanitizeInput($_POST['price']));
+    $quantity = floatval(sanitizeInput($_POST['quantity']));
+    $unit = sanitizeInput($_POST['unit']);
+
+    // Check if a product with the same name, category, unit, price, brand_name, and type already exists
+    $checkSql = "SELECT id, quantity FROM products 
+                 WHERE name = '$name' 
+                 AND category_id = $category_id 
+                 AND unit = '$unit' 
+                 AND price = $price 
+                 AND brand_name = '$brand_name' 
+                 AND (type = '$type' OR (type IS NULL AND '$type' = ''))";
+    $checkResult = $conn->query($checkSql);
+
+    if ($checkResult->num_rows > 0) {
+        // Product exists, update the quantity
+        $existingProduct = $checkResult->fetch_assoc();
+        $newQuantity = $existingProduct['quantity'] + $quantity;
+        $updateSql = "UPDATE products 
+                      SET quantity = $newQuantity 
+                      WHERE id = " . $existingProduct['id'];
+        if ($conn->query($updateSql) === TRUE) {
+            $message = "Product quantity updated successfully";
         } else {
-            $error = "Error updating category: " . $conn->error;
+            $error = "Error updating product quantity: " . $conn->error;
         }
-    } elseif (isset($_POST['delete_category'])) {
-        $id = sanitizeInput($_POST['id']);
-        $sql = "DELETE FROM categories WHERE id=$id";
+    } else {
+        // Product does not exist, insert a new product
+        $sql = "INSERT INTO products (category_id, name, price, quantity, unit, brand_name, type)
+                VALUES ($category_id, '$name', $price, $quantity, '$unit', '$brand_name', '$type')";
+
         if ($conn->query($sql) === TRUE) {
-            $message = "Category deleted successfully";
+            $message = "Product added successfully";
         } else {
-            $error = "Error deleting category: " . $conn->error;
+            $error = "Error adding product: " . $conn->error;
         }
     }
+} elseif (isset($_POST['delete_product'])) {
+    $id = sanitizeInput($_POST['id']);
+    $sql = "DELETE FROM products WHERE id=$id";
+    if ($conn->query($sql) === TRUE) {
+        $message = "Product deleted successfully";
+    } else {
+        $error = "Error deleting product: " . $conn->error;
+    }
+} elseif (isset($_POST['update_product'])) {
+    $id = sanitizeInput($_POST['id']);
+    $category_id = sanitizeInput($_POST['category_id']);
+    $name = sanitizeInput($_POST['name']);
+    $brand_name = sanitizeInput($_POST['brand_name']);
+    $type = sanitizeInput($_POST['type']);
+    $price = floatval(sanitizeInput($_POST['price']));
+    $quantity = floatval(sanitizeInput($_POST['quantity']));
+    $unit = sanitizeInput($_POST['unit']);
 
-    // Handle product form submissions
-    if (isset($_POST['add_product'])) {
-        $category_id = sanitizeInput($_POST['category_id']);
-        $name = sanitizeInput($_POST['name']);
-        $brand_name = sanitizeInput($_POST['brand_name']);
-        $type = sanitizeInput($_POST['type']);
-        $price = floatval(sanitizeInput($_POST['price']));
-        $quantity = floatval(sanitizeInput($_POST['quantity']));
-        $unit = sanitizeInput($_POST['unit']);
+    $sql = "UPDATE products SET category_id=$category_id, name='$name', brand_name='$brand_name', type='$type', price=$price, quantity=$quantity, unit='$unit' WHERE id=$id";
 
-        // Check if a product with the same name, category, unit, price, brand_name, and type already exists
-        $checkSql = "SELECT id, quantity FROM products 
-                     WHERE name = '$name' 
-                     AND category_id = $category_id 
-                     AND unit = '$unit' 
-                     AND price = $price 
-                     AND brand_name = '$brand_name' 
-                     AND (type = '$type' OR (type IS NULL AND '$type' = ''))";
-        $checkResult = $conn->query($checkSql);
-
-        if ($checkResult->num_rows > 0) {
-            // Product exists, update the quantity
-            $existingProduct = $checkResult->fetch_assoc();
-            $newQuantity = $existingProduct['quantity'] + $quantity;
-            $updateSql = "UPDATE products 
-                          SET quantity = $newQuantity 
-                          WHERE id = " . $existingProduct['id'];
-            if ($conn->query($updateSql) === TRUE) {
-                $message = "Product quantity updated successfully";
-            } else {
-                $error = "Error updating product quantity: " . $conn->error;
-            }
-        } else {
-            // Product does not exist, insert a new product
-            $sql = "INSERT INTO products (category_id, name, price, quantity, unit, brand_name, type)
-                    VALUES ($category_id, '$name', $price, $quantity, '$unit', '$brand_name', '$type')";
-
-            if ($conn->query($sql) === TRUE) {
-                $message = "Product added successfully";
-            } else {
-                $error = "Error adding product: " . $conn->error;
-            }
-        }
-    } elseif (isset($_POST['delete_product'])) {
-        $id = sanitizeInput($_POST['id']);
-        $sql = "DELETE FROM products WHERE id=$id";
-        if ($conn->query($sql) === TRUE) {
-            $message = "Product deleted successfully";
-        } else {
-            $error = "Error deleting product: " . $conn->error;
-        }
-    } elseif (isset($_POST['update_product'])) {
-        $id = sanitizeInput($_POST['id']);
-        $category_id = sanitizeInput($_POST['category_id']);
-        $name = sanitizeInput($_POST['name']);
-        $brand_name = sanitizeInput($_POST['brand_name']);
-        $type = sanitizeInput($_POST['type']);
-        $price = floatval(sanitizeInput($_POST['price']));
-        $quantity = floatval(sanitizeInput($_POST['quantity']));
-        $unit = sanitizeInput($_POST['unit']);
-
-        $sql = "UPDATE products SET category_id=$category_id, name='$name', brand_name='$brand_name', type='$type', price=$price, quantity=$quantity, unit='$unit' WHERE id=$id";
-
-        if ($conn->query($sql) === TRUE) {
-            $message = "Product updated successfully";
-        } else {
-            $error = "Error updating product: " . $conn->error;
-        }
+    if ($conn->query($sql) === TRUE) {
+        $message = "Product updated successfully";
+    } else {
+        $error = "Error updating product: " . $conn->error;
     }
 }
 
@@ -147,48 +130,10 @@ if ($categoryResult->num_rows > 0) {
             <label for="category_name">Category Name</label>
             <input type="text" id="category_name" name="name" placeholder="Category Name (e.g., Cement, Rod)" required>
         </div>
-        <button type="submit" name="add_category">Add Category</button>
+        <div class="form-group button-container">
+            <button type="submit" name="add_category">Add Category</button>
+        </div>
     </form>
-
-    <h3>Category List</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Category Name</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php
-            if ($categoryResult->num_rows > 0) {
-                while ($categoryRow = $categoryResult->fetch_assoc()) {
-                    echo "<tr>";
-                    echo "<td>" . htmlspecialchars($categoryRow['name']) . "</td>";
-                    echo "<td>";
-                    echo "<button onclick=\"editCategory(" . $categoryRow['id'] . ", '" . htmlspecialchars($categoryRow['name']) . "')\">Edit</button> | ";
-                    echo "<form method='post' style='display:inline;'><input type='hidden' name='id' value='" . $categoryRow['id'] . "'><button type='submit' name='delete_category'>Delete</button></form>";
-                    echo "</td>";
-                    echo "</tr>";
-                }
-            } else {
-                echo "<tr><td colspan='2'>No categories found</td></tr>";
-            }
-            ?>
-        </tbody>
-    </table>
-
-    <div id="edit_category_form" class="form-container" style="display:none;">
-        <h3>Edit Category</h3>
-        <form method="post">
-            <input type="hidden" name="id" id="edit_id">
-            <div class="form-group">
-                <label for="edit_name">Category Name</label>
-                <input type="text" name="name" id="edit_name" placeholder="Category Name" required>
-            </div>
-            <button type="submit" name="update_category">Update Category</button>
-            <button type="button" onclick="document.getElementById('edit_category_form').style.display='none';">Cancel</button>
-        </form>
-    </div>
 </div>
 
 <hr>
@@ -237,7 +182,9 @@ if ($categoryResult->num_rows > 0) {
                 <option value="">Select Unit</option>
             </select>
         </div>
-        <button type="submit" name="add_product">Add Product</button>
+        <div class="form-group button-container">
+            <button type="submit" name="add_product">Add Product</button>
+        </div>
     </form>
 
     <h3>Product List</h3>
@@ -411,12 +358,6 @@ if ($categoryResult->num_rows > 0) {
         }
     }
 
-    function editCategory(id, name) {
-        document.getElementById('edit_category_form').style.display = 'block';
-        document.getElementById('edit_id').value = id;
-        document.getElementById('edit_name').value = name;
-    }
-
     function editProduct(id, category_id, name, brand_name, type, price, quantity, unit) {
         console.log("editProduct called with unit:", unit); // Debug: Check unit passed to edit
         document.getElementById('edit_product_form').style.display = 'block';
@@ -443,16 +384,11 @@ if ($categoryResult->num_rows > 0) {
     margin-bottom: 20px;
 }
 
-.category-form {
+.category-form, .product-form {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-}
-
-.product-form {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px; /* Increased gap for better spacing between form fields */
+    gap: 20px; /* Increased gap for better spacing */
+    justify-content: space-between; /* Align items with space between */
 }
 
 .form-container {
@@ -464,6 +400,7 @@ if ($categoryResult->num_rows > 0) {
     display: flex;
     flex-direction: column;
     min-width: 200px; /* Ensure fields don't get too narrow */
+    margin-bottom: 10px; /* Add vertical spacing between fields */
 }
 
 .form-group label {
@@ -471,6 +408,13 @@ if ($categoryResult->num_rows > 0) {
     margin-bottom: 5px;
     color: #333;
     font-size: 14px;
+}
+
+.form-group.button-container {
+    flex: 1 1 100%; /* Span full width for button alignment */
+    display: flex;
+    justify-content: flex-end; /* Align button to the right */
+    margin-top: 10px; /* Add some space above the button */
 }
 
 .category-form input, .product-form input, .product-form select {
@@ -487,7 +431,8 @@ if ($categoryResult->num_rows > 0) {
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    align-self: flex-start;
+    align-self: flex-end; /* Ensure button aligns with form end */
+    margin-left: auto; /* Push button to the right */
 }
 
 .category-form button:hover, .product-form button:hover {
