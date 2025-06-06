@@ -91,7 +91,7 @@ $dateCondition = "";
 $dateFilterParams = [];
 $fromDate = isset($_GET['from_date']) ? sanitizeInput($_GET['from_date']) : '';
 $toDate = isset($_GET['to_date']) ? sanitizeInput($_GET['to_date']) : '';
-$today = date('Y-m-d'); // 2025-06-01
+$today = date('Y-m-d'); // 2025-06-06
 
 if ($fromDate && $toDate) {
     $dateCondition = "transaction_date BETWEEN ? AND ?";
@@ -217,28 +217,32 @@ $netIncome = $totalDeposit - $totalExpenses;
             overflow-y: auto;
         }
         .content {
-            margin-right: 250px;
-            padding: 20px 0 20px 20px; /* Adjusted padding to align left */
-            width: calc(100% - 250px);
+            margin-left: 100px; /* Match sidebar width */
+            padding: 0px 0 0px 0; /* No left padding */
+            width: width: 100%; /* Adjust width to exclude sidebar */
             background-color: #f9f9f9;
             flex: 1;
             display: block;
         }
         .content-inner {
-            max-width: none; /* Removed max-width constraint */
-            margin-left: 0;
-            padding: 0;
-            width: 100%; /* Ensure full width usage */
+            width: 100%; /* Full width of the content area */
+            margin: 0; /* No margins */
+            padding: 0; /* No padding */
+        }
+        .content-inner > * {
+            margin-left: 0 !important; /* Override any inherited or default margins for all direct children */
         }
         h2 {
             color: #2e7d32;
             font-size: 24px;
             margin-bottom: 20px;
+            width: 100%; /* Ensure full width */
         }
         h3 {
             color: #333;
             font-size: 18px;
             margin-bottom: 10px;
+            width: 100%; /* Ensure full width */
         }
         /* Totals Styling */
         .totals-container {
@@ -246,7 +250,8 @@ $netIncome = $totalDeposit - $totalExpenses;
             gap: 20px;
             flex-wrap: wrap;
             margin-bottom: 20px;
-            justify-content: flex-start; /* Align totals to the left */
+            justify-content: flex-start;
+            width: 100%; /* Ensure full width */
         }
         .total-box {
             background-color: #fff;
@@ -256,7 +261,6 @@ $netIncome = $totalDeposit - $totalExpenses;
             flex: 1;
             min-width: 200px;
             text-align: center;
-            max-width: 300px; /* Limit max width for readability */
         }
         .total-box h4 {
             margin: 0 0 10px;
@@ -282,13 +286,13 @@ $netIncome = $totalDeposit - $totalExpenses;
             flex-wrap: wrap;
             gap: 15px;
             align-items: flex-end;
-            width: 100%; /* Use full available width */
-            justify-content: flex-start; /* Align form fields to the left */
+            width: 100%; /* Full width */
+            justify-content: flex-start;
         }
         .transaction-form div {
             flex: 1;
-            min-width: 200px;
-            max-width: 250px; /* Limit max width for better layout */
+            min-width: 0; /* Remove min-width constraint */
+            max-width: none; /* Remove max-width constraint */
         }
         .transaction-form label {
             display: block;
@@ -336,13 +340,13 @@ $netIncome = $totalDeposit - $totalExpenses;
             gap: 15px;
             align-items: flex-end;
             flex-wrap: wrap;
-            width: 100%; /* Use full available width */
-            justify-content: flex-start; /* Align filter fields to the left */
+            width: 100%; /* Full width */
+            justify-content: flex-start;
         }
         .date-filter div {
             flex: 1;
-            min-width: 150px;
-            max-width: 200px; /* Limit max width for better layout */
+            min-width: 0; /* Remove min-width constraint */
+            max-width: none; /* Remove max-width constraint */
         }
         .date-filter label {
             display: block;
@@ -376,7 +380,7 @@ $netIncome = $totalDeposit - $totalExpenses;
             background-color: #e0f7e0;
             border-radius: 4px;
             margin-bottom: 20px;
-            width: 100%; /* Ensure messages use full width */
+            width: 100%;
         }
         .error {
             color: red;
@@ -384,13 +388,13 @@ $netIncome = $totalDeposit - $totalExpenses;
             background-color: #ffe0e0;
             border-radius: 4px;
             margin-bottom: 20px;
-            width: 100%; /* Ensure errors use full width */
+            width: 100%;
         }
         /* Table Styling */
         .table-container {
             overflow-x: auto;
-            width: 100%; /* Use full available width */
-            margin: 0; /* Remove unnecessary margins */
+            width: 100%; /* Full width */
+            margin: 0; /* No margins */
         }
         table {
             width: 100%;
@@ -428,8 +432,8 @@ $netIncome = $totalDeposit - $totalExpenses;
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
-            justify-content: flex-start; /* Align buttons to the left */
-            width: 100%; /* Use full available width */
+            justify-content: flex-start;
+            width: 100%; /* Full width */
         }
         .export-buttons button {
             background-color: #1976D2;
@@ -468,11 +472,14 @@ $netIncome = $totalDeposit - $totalExpenses;
             .content {
                 margin-left: 0;
                 width: 100%;
-                padding: 20px;
+                padding: 20px; /* Restore padding for mobile view */
             }
             .content-inner {
-                margin-left: 0;
+                margin: 0;
                 padding: 0;
+            }
+            .content-inner > * {
+                margin-left: 0 !important; /* Ensure no left margin in mobile view */
             }
             .transaction-form div,
             .date-filter div {
@@ -490,7 +497,7 @@ $netIncome = $totalDeposit - $totalExpenses;
                 flex-direction: column;
             }
             .total-box {
-                max-width: none; /* Remove max-width on mobile */
+                max-width: none;
             }
         }
         /* Print Styling */
@@ -504,7 +511,7 @@ $netIncome = $totalDeposit - $totalExpenses;
                 padding: 0;
             }
             .content-inner {
-                margin-left: 0;
+                margin: 0;
             }
             .totals-container {
                 margin-bottom: 10px;
@@ -542,7 +549,7 @@ $netIncome = $totalDeposit - $totalExpenses;
                 </div>
                 <div>
                     <label for="deposit_date">Date</label>
-                    <input type="date" name="transaction_date" id="deposit_date" value="2025-06-01" form="addDepositForm" required>
+                    <input type="date" name="transaction_date" id="deposit_date" value="2025-06-06" form="addDepositForm" required>
                 </div>
                 <div>
                     <button type="submit" form="addDepositForm">Add Deposit</button>
@@ -565,7 +572,7 @@ $netIncome = $totalDeposit - $totalExpenses;
                 </div>
                 <div>
                     <label for="expense_date">Date</label>
-                    <input type="date" name="transaction_date" id="expense_date" value="2025-06-01" form="addExpenseForm" required>
+                    <input type="date" name="transaction_date" id="expense_date" value="2025-06-06" form="addExpenseForm" required>
                 </div>
                 <div>
                     <button type="submit" form="addExpenseForm">Add Expense</button>

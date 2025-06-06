@@ -51,9 +51,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 }
 
-// Fetch customers for listing
-$customersSql = "SELECT * FROM customers";
-$customersResult = $conn->query($customersSql);
+// Pagination logic
+$customersPerPage = 10;
+$currentPage = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+if ($currentPage < 1) {
+    $currentPage = 1;
+}
+$offset = ($currentPage - 1) * $customersPerPage;
+
+// Get total number of customers
+$totalCustomersSql = "SELECT COUNT(*) as total FROM customers";
+$totalResult = $conn->query($totalCustomersSql);
+$totalRow = $totalResult->fetch_assoc();
+$totalCustomers = $totalRow['total'];
+$totalPages = ceil($totalCustomers / $customersPerPage);
+
+// Fetch customers for the current page
+$customersSql = "SELECT * FROM customers LIMIT ? OFFSET ?";
+$stmt = $conn->prepare($customersSql);
+if ($stmt) {
+    $stmt->bind_param("ii", $customersPerPage, $offset);
+    $stmt->execute();
+    $customersResult = $stmt->get_result();
+    $stmt->close();
+} else {
+    die("Error preparing statement: " . $conn->error);
+}
 ?>
 
 <!DOCTYPE html>
@@ -131,6 +154,30 @@ $customersResult = $conn->query($customersSql);
             border: 1px solid #ccc;
             border-radius: 4px;
         }
+        .pagination {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .pagination a {
+            color: #4CAF50;
+            padding: 8px 16px;
+            text-decoration: none;
+            border: 1px solid #ddd;
+            margin: 0 4px;
+            border-radius: 4px;
+        }
+        .pagination a:hover {
+            background-color: #f1f1f1;
+        }
+        .pagination a.active {
+            background-color: #4CAF50;
+            color: white;
+            border: 1px solid #4CAF50;
+        }
+        .pagination a.disabled {
+            color: #ccc;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -184,6 +231,34 @@ $customersResult = $conn->query($customersSql);
             ?>
         </tbody>
     </table>
+
+    <!-- Pagination Links -->
+    <div class="pagination">
+        <?php
+        // Previous page link
+        if ($currentPage > 1) {
+            echo "<a href='customers.php?page=" . ($currentPage - 1) . "'>Previous</a>";
+        } else {
+            echo "<a href='#' class='disabled'>Previous</a>";
+        }
+
+        // Page numbers
+        for ($i = 1; $i <= $totalPages; $i++) {
+            if ($i == $currentPage) {
+                echo "<a href='#' class='active'>" . $i . "</a>";
+            } else {
+                echo "<a href='customers.php?page=" . $i . "'>" . $i . "</a>";
+            }
+        }
+
+        // Next page link
+        if ($currentPage < $totalPages) {
+            echo "<a href='customers.php?page=" . ($currentPage + 1) . "'>Next</a>";
+        } else {
+            echo "<a href='#' class='disabled'>Next</a>";
+        }
+        ?>
+    </div>
 
     <div id="edit_customer_form" style="display:none;">
         <h3>Edit Customer</h3>

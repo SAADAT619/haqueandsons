@@ -78,6 +78,9 @@ CREATE TABLE sellers (
     INDEX idx_name (name),
     INDEX idx_phone (phone),
     FULLTEXT idx_address (address)
+    -- Optional: Replace FULLTEXT with regular INDEX if not using MATCH...AGAINST
+    -- DROP INDEX idx_address,
+    -- INDEX idx_address (address(255))
 );
 
 -- Table: purchases (Legacy table for buy.php compatibility, updated structure)
@@ -147,6 +150,9 @@ CREATE TABLE customers (
     INDEX idx_name (name),
     INDEX idx_phone (phone),
     FULLTEXT idx_address (address)
+    -- Optional: Replace FULLTEXT with regular INDEX if not using MATCH...AGAINST
+    -- DROP INDEX idx_address,
+    -- INDEX idx_address (address(255))
 );
 
 -- Table: sales (Stores sales records)
@@ -204,7 +210,7 @@ CREATE TABLE expenses (
     INDEX idx_transaction_date (transaction_date)
 );
 
--- Triggers to update product quantities and validate sale_date
+-- Triggers to update product quantities and validate dates
 DELIMITER //
 
 -- Trigger: Before inserting a sale, ensure sale_date is not in the future
@@ -228,6 +234,50 @@ BEGIN
         SET MESSAGE_TEXT = 'Sale date cannot be in the future';
     END IF;
 END //
+
+-- Trigger: Before inserting a purchase, ensure purchase_date is not in the future
+CREATE TRIGGER before_purchase_insert
+BEFORE INSERT ON purchase_headers
+FOR EACH ROW
+BEGIN
+    IF NEW.purchase_date > CURDATE() THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Purchase date cannot be in the future';
+    END IF;
+END //
+
+-- Trigger: Before updating a purchase, ensure purchase_date is not in the future
+CREATE TRIGGER before_purchase_update
+BEFORE UPDATE ON purchase_headers
+FOR EACH ROW
+BEGIN
+    IF NEW.purchase_date > CURDATE() THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Purchase date cannot be in the future';
+    END IF;
+END //
+
+-- Optional Trigger: Before inserting an expense, ensure transaction_date is not in the future
+-- CREATE TRIGGER before_expense_insert
+-- BEFORE INSERT ON expenses
+-- FOR EACH ROW
+-- BEGIN
+--     IF NEW.transaction_date > CURDATE() THEN
+--         SIGNAL SQLSTATE '45000'
+--         SET MESSAGE_TEXT = 'Transaction date cannot be in the future';
+--     END IF;
+-- END //
+
+-- Optional Trigger: Before updating an expense, ensure transaction_date is not in the future
+-- CREATE TRIGGER before_expense_update
+-- BEFORE UPDATE ON expenses
+-- FOR EACH ROW
+-- BEGIN
+--     IF NEW.transaction_date > CURDATE() THEN
+--         SIGNAL SQLSTATE '45000'
+--         SET MESSAGE_TEXT = 'Transaction date cannot be in the future';
+--     END IF;
+-- END //
 
 -- Trigger: After inserting a purchase item, increase product quantity
 CREATE TRIGGER after_purchase_item_insert
@@ -315,9 +365,9 @@ END //
 
 DELIMITER ;
 
--- Insert default shop details
+-- Insert default shop details (updated to "Demo Cement Shop")
 INSERT INTO shop_details (id, shop_name, address, phone, email) VALUES
-(1, 'Demo Cement Store', '123 Business Avenue, City, Country', '+123-456-7890', 'contact@democement.com');
+(1, 'Demo Cement Shop', '123 Demo Street, Sample City, SC 12345', '(123) 456-7890', 'contact@demolocalshop.com');
 
 -- Insert payment methods
 INSERT INTO payment_methods (method) VALUES 
@@ -353,14 +403,14 @@ INSERT INTO rod_types (type) VALUES
 ('20mm'),
 ('25mm');
 
--- Insert sample products with initial quantities (before triggers)
+-- Insert sample products with updated quantities (after triggers)
 INSERT INTO products (category_id, name, price, quantity, unit, brand_name, type) VALUES 
-(1, '7 Rings', 550.00, 0, 'bags', '7 Rings', NULL),
-(1, 'Shah Cement', 540.00, 0, 'bags', 'Shah Cement', NULL),
-(1, 'Premier Cement', 530.00, 0, 'bags', 'Premier', NULL),
-(2, 'BSRM', 250.00, 0, 'piece', 'BSRM', '8mm'),
-(2, 'KSRM', 260.00, 0, 'piece', 'KSRM', '10mm'),
-(2, 'Rod', 250.00, 0, 'piece', 'BSRM', '12mm');
+(1, '7 Rings', 550.00, 0, 'bags', '7 Rings', NULL),           -- 0 + 18 + 4 - 7 - 2 - 1 - 5 - 3 - 4 = 0
+(1, 'Shah Cement', 540.00, 16, 'bags', 'Shah Cement', NULL),   -- 0 + 10 + 6 = 16
+(1, 'Premier Cement', 530.00, 4, 'bags', 'Premier', NULL),     -- 0 + 12 - 5 - 3 = 4
+(2, 'BSRM', 250.00, 7, 'piece', 'BSRM', '8mm'),                -- 0 + 15 + 6 + 7 - 10 - 1 - 5 - 3 - 2 = 7
+(2, 'KSRM', 260.00, 20, 'piece', 'KSRM', '10mm'),              -- 0 + 10 + 15 - 5 = 20
+(2, 'Rod', 250.00, 0, 'piece', 'BSRM', '12mm');                -- 0 (unchanged)
 
 -- Insert sample customers
 INSERT INTO customers (name, phone, address) VALUES 
@@ -377,9 +427,9 @@ INSERT INTO sellers (name, phone, address) VALUES
 ('Seller Three', '6677889900', '321 Seller Road'),
 ('Seller Four', '5566778899', '654 Seller Street');
 
--- Insert sample purchase headers (updated total for PUR-20250410001)
+-- Insert sample purchase headers
 INSERT INTO purchase_headers (seller_id, total, paid, due, purchase_date, payment_method_id, invoice_number) VALUES 
-(1, 9000.00, 8000.00, 1000.00, '2025-04-10', 1, 'PUR-20250410001'), -- Updated total from 5000 to 9000
+(1, 9000.00, 8000.00, 1000.00, '2025-04-10', 1, 'PUR-20250410001'),
 (2, 3000.00, 2500.00, 500.00, '2025-04-11', 2, 'PUR-20250411001'),
 (1, 2200.00, 2000.00, 200.00, '2025-03-15', 1, 'PUR-20250315001'),
 (2, 1500.00, 1500.00, 0.00, '2025-03-20', 3, 'PUR-20250320001'),
@@ -390,9 +440,9 @@ INSERT INTO purchase_headers (seller_id, total, paid, due, purchase_date, paymen
 (3, 3200.00, 3000.00, 200.00, '2025-05-15', 1, 'PUR-20250515001'),
 (4, 1800.00, 1800.00, 0.00, '2025-02-10', 3, 'PUR-20250210001');
 
--- Insert sample purchase items (increased quantity for purchase_id 1)
+-- Insert sample purchase items
 INSERT INTO purchase_items (purchase_id, product_id, quantity, price, total, unit, type) VALUES 
-(1, 1, 18, 500.00, 9000.00, 'bags', NULL), -- Increased from 10 to 18 bags
+(1, 1, 18, 500.00, 9000.00, 'bags', NULL),
 (2, 4, 15, 200.00, 3000.00, 'piece', '8mm'),
 (3, 1, 4, 550.00, 2200.00, 'bags', NULL),
 (4, 4, 6, 250.00, 1500.00, 'piece', '10mm'),
@@ -403,9 +453,9 @@ INSERT INTO purchase_items (purchase_id, product_id, quantity, price, total, uni
 (9, 2, 6, 533.33, 3200.00, 'bags', NULL),
 (10, 4, 7, 257.14, 1800.00, 'piece', '8mm');
 
--- Insert sample purchases (updated total for PUR-20250410001)
+-- Insert sample purchases
 INSERT INTO purchases (seller_id, product_id, quantity, price, total, paid, due, purchase_date, payment_method_id, invoice_number, unit, type) VALUES 
-(1, 1, 18, 500.00, 9000.00, 8000.00, 1000.00, '2025-04-10', 1, 'PUR-20250410001', 'bags', NULL), -- Updated total and quantity
+(1, 1, 18, 500.00, 9000.00, 8000.00, 1000.00, '2025-04-10', 1, 'PUR-20250410001', 'bags', NULL),
 (2, 4, 15, 200.00, 3000.00, 2500.00, 500.00, '2025-04-11', 2, 'PUR-20250411001', 'piece', '8mm'),
 (1, 1, 4, 550.00, 2200.00, 2000.00, 200.00, '2025-03-15', 1, 'PUR-20250315001', 'bags', NULL),
 (2, 4, 6, 250.00, 1500.00, 1500.00, 0.00, '2025-03-20', 3, 'PUR-20250320001', 'piece', '10mm'),
@@ -463,10 +513,4 @@ INSERT INTO expenses (name, amount, type, transaction_date) VALUES
 ('Customer Advance', 6000.00, 'Deposit', '2025-06-01'),
 ('Utility Bill', 2000.00, 'Expense', '2025-06-01');
 
--- Comment: Recalculate product quantities after purchases and sales
--- Product 1 (7 Rings): 0 + 18 + 4 - 7 - 2 - 1 - 5 - 3 - 4 = 0
--- Product 2 (Shah Cement): 0 + 10 + 6 = 16
--- Product 3 (Premier Cement): 0 + 12 - 5 - 3 = 4
--- Product 4 (BSRM): 0 + 15 + 6 + 7 - 10 - 1 - 5 - 3 - 2 = 7
--- Product 5 (KSRM): 0 + 10 + 15 - 5 = 20
--- Product 6 (Rod): 0 (unchanged)
+-- Comment: Product quantities are now set directly in the products table

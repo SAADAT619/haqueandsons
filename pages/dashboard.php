@@ -6,6 +6,9 @@ if (!isset($_SESSION['user_email'])) {
     exit();
 }
 
+// Clear low stock notification flag on login to ensure it shows each time
+unset($_SESSION['low_stock_notified']);
+
 include '../config/database.php';
 include '../core/functions.php';
 include '../includes/header.php';
@@ -17,8 +20,8 @@ if ($conn->connect_error) {
 }
 
 // Set default date as today and current month based on system time
-$today = date('Y-m-d'); // e.g., 2025-05-30
-$month = date('Y-m'); // e.g., 2025-05
+$today = date('Y-m-d'); // e.g., 2025-06-06
+$month = date('Y-m'); // e.g., 2025-06
 
 // Reset filters to current date and month on page refresh (no form submission)
 if (!isset($_POST['filter_date']) && !isset($_POST['filter_month'])) {
@@ -52,8 +55,8 @@ $dailyBuySql = "SELECT COALESCE(SUM(total), 0) as total_buy, COALESCE(SUM(due), 
                 WHERE DATE(purchase_date) = '$filterDate'";
 $dailyBuyResult = $conn->query($dailyBuySql);
 if ($dailyBuyResult === false) {
-    $error = "Error fetching daily purchases: " . $conn->error;
-    error_log("Daily purchases query failed in dashboard.php: " . $conn->error);
+    $error = "Error fetching daily purchases: " . $conn->connect_error;
+    error_log("Daily purchases query failed in dashboard.php: " . $conn->connect_error);
 } else {
     $dailyBuyRow = $dailyBuyResult->fetch_assoc();
     $dailyBuy = $dailyBuyRow['total_buy'];
@@ -66,8 +69,8 @@ $dailySellSql = "SELECT COALESCE(SUM(total), 0) as total_sell, COALESCE(SUM(due)
                  WHERE DATE(sale_date) = '$filterDate'";
 $dailySellResult = $conn->query($dailySellSql);
 if ($dailySellResult === false) {
-    $error = "Error fetching daily sales: " . $conn->error;
-    error_log("Daily sales query failed in dashboard.php: " . $conn->error);
+    $error = "Error fetching daily sales: " . $conn->connect_error;
+    error_log("Daily sales query failed in dashboard.php: " . $conn->connect_error);
 } else {
     $dailySellRow = $dailySellResult->fetch_assoc();
     $dailySell = $dailySellRow['total_sell'];
@@ -81,8 +84,8 @@ $monthlyBuySql = "SELECT COALESCE(SUM(total), 0) as total_buy, COALESCE(SUM(due)
                   AND MONTH(purchase_date) = MONTH('$filterMonth-01')";
 $monthlyBuyResult = $conn->query($monthlyBuySql);
 if ($monthlyBuyResult === false) {
-    $error = "Error fetching monthly purchases: " . $conn->error;
-    error_log("Monthly purchases query failed in dashboard.php: " . $conn->error);
+    $error = "Error fetching monthly purchases: " . $conn->connect_error;
+    error_log("Monthly purchases query failed in dashboard.php: " . $conn->connect_error);
 } else {
     $monthlyBuyRow = $monthlyBuyResult->fetch_assoc();
     $monthlyBuy = $monthlyBuyRow['total_buy'];
@@ -95,23 +98,36 @@ $monthlySellSql = "SELECT COALESCE(SUM(total), 0) as total_sell, COALESCE(SUM(du
                    AND MONTH(sale_date) = MONTH('$filterMonth-01')";
 $monthlySellResult = $conn->query($monthlySellSql);
 if ($monthlySellResult === false) {
-    $error = "Error fetching monthly sales: " . $conn->error;
-    error_log("Monthly sales query failed in dashboard.php: " . $conn->error);
+    $error = "Error fetching monthly sales: " . $conn->connect_error;
+    error_log("Monthly sales query failed in dashboard.php: " . $conn->connect_error);
 } else {
     $monthlySellRow = $monthlySellResult->fetch_assoc();
     $monthlySell = $monthlySellRow['total_sell'];
     $monthlyDue += $monthlySellRow['total_due']; // Add sales due to total monthly due
 }
 
-// Fetch stock list
+// Fetch stock list with low stock check
 $stockSql = "SELECT p.*, c.name as category_name 
              FROM products p 
              LEFT JOIN categories c ON p.category_id = c.id 
              ORDER BY p.name ASC";
 $stockResult = $conn->query($stockSql);
 if ($stockResult === false) {
-    $error = "Error fetching stock list: " . $conn->error;
-    error_log("Stock list query failed in dashboard.php: " . $conn->error);
+    $error = "Error fetching stock list: " . $conn->connect_error;
+    error_log("Stock list query failed in dashboard.php: " . $conn->connect_error);
+}
+
+// Check for low stock and prepare data for JavaScript
+$lowStockThreshold = 5; // Define threshold for low stock
+$lowStockProducts = [];
+if ($stockResult && $stockResult->num_rows > 0) {
+    $stockResult->data_seek(0); // Reset result pointer
+    while ($stockRow = $stockResult->fetch_assoc()) {
+        if ($stockRow['quantity'] <= $lowStockThreshold) {
+            $lowStockProducts[] = htmlspecialchars($stockRow['name']);
+        }
+    }
+    $stockResult->data_seek(0); // Reset for table display
 }
 ?>
 
@@ -189,13 +205,14 @@ if ($stockResult === false) {
         if (isset($stockResult) && $stockResult !== false) {
             if ($stockResult->num_rows > 0) {
                 while ($stockRow = $stockResult->fetch_assoc()) {
+                    $quantityStyle = $stockRow['quantity'] <= $lowStockThreshold ? 'color: red;' : '';
                     echo "<tr>";
                     echo "<td>" . htmlspecialchars($stockRow['name']) . "</td>";
                     echo "<td>" . htmlspecialchars($stockRow['category_name'] ?? 'N/A') . "</td>";
                     echo "<td>" . htmlspecialchars($stockRow['brand_name'] ?? 'N/A') . "</td>";
                     echo "<td>" . htmlspecialchars($stockRow['unit'] ?? 'N/A') . "</td>";
                     echo "<td>" . number_format($stockRow['price'], 2) . "</td>";
-                    echo "<td>" . number_format($stockRow['quantity'], 2) . "</td>";
+                    echo "<td style='$quantityStyle'>" . number_format($stockRow['quantity'], 2) . "</td>";
                     echo "<td>" . htmlspecialchars($stockRow['updated_at']) . "</td>";
                     echo "</tr>";
                 }
@@ -227,6 +244,17 @@ function filterStock() {
         rows[i].style.display = match ? '' : 'none';
     }
 }
+
+// Show low stock notification on page load
+window.onload = function() {
+    <?php if (!empty($lowStockProducts)): ?>
+        console.log('Low stock products detected:', <?php echo json_encode($lowStockProducts); ?>);
+        alert('Warning: The following products have low stock (quantity <= <?php echo $lowStockThreshold; ?>): \n- <?php echo implode('\n- ', $lowStockProducts); ?>\nPlease restock soon!');
+        <?php $_SESSION['low_stock_notified'] = true; // Set after showing notification ?>
+    <?php else: ?>
+        console.log('No low stock products detected.');
+    <?php endif; ?>
+};
 </script>
 
 <style>

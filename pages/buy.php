@@ -15,6 +15,10 @@ if ($conn->connect_error) {
     die("Database connection failed: " . $conn->connect_error);
 }
 
+// Initialize error and success messages
+$error = '';
+$success = '';
+
 // Fetch sellers with previous due
 $sellerSql = "SELECT s.id, s.name, COALESCE(SUM(ph.due), 0) as previous_due 
               FROM sellers s 
@@ -78,7 +82,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['update_purchase'])) 
     $purchase_date = filter_input(INPUT_POST, 'purchase_date');
     $payment_method_id = filter_input(INPUT_POST, 'payment_method_id', FILTER_VALIDATE_INT);
     $current_payment = filter_input(INPUT_POST, 'current_payment', FILTER_VALIDATE_FLOAT) ?? 0;
-    $total = 0;
     $paid = filter_input(INPUT_POST, 'paid', FILTER_VALIDATE_FLOAT);
     $product_ids = $_POST['product_id'] ?? [];
     $quantities = $_POST['quantity'] ?? [];
@@ -89,12 +92,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['update_purchase'])) 
     if (!$seller_id || !$purchase_date || !$payment_method_id || empty($product_ids) || $paid === false) {
         $error = "All fields are required, and paid amount must be a valid number.";
     } else {
-        // Validate purchase date format
         $date = DateTime::createFromFormat('Y-m-d', $purchase_date);
         if (!$date || $date->format('Y-m-d') !== $purchase_date) {
             $error = "Invalid purchase date format.";
+        } elseif ($date > new DateTime()) {
+            $error = "Purchase date cannot be in the future.";
         } else {
-            // Calculate total
+            $total = 0;
             for ($i = 0; $i < count($product_ids); $i++) {
                 $quantity = floatval($quantities[$i]);
                 $price = floatval($prices[$i]);
@@ -106,7 +110,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['update_purchase'])) 
             }
 
             if (!isset($error)) {
-                // Fetch previous due for the seller
                 $prevDueSql = "SELECT COALESCE(SUM(due), 0) as previous_due 
                                FROM purchase_headers 
                                WHERE seller_id = ? AND due > 0";
@@ -115,30 +118,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['update_purchase'])) 
                 $prevDueStmt->execute();
                 $prevDueResult = $prevDueStmt->get_result();
                 $previous_due = $prevDueResult->fetch_assoc()['previous_due'];
+                $prevDueStmt->close();
 
                 $due = $total - $paid;
-                $excess_payment = max(0, $current_payment - $previous_due);
                 $effective_current_payment = min($current_payment, $previous_due);
+                $excess_payment = max(0, $current_payment - $previous_due);
                 $new_paid = $paid + $excess_payment;
-                $total_due = $previous_due - $effective_current_payment + ($total - $new_paid);
+                $total_due = ($previous_due - $effective_current_payment) + ($total - $new_paid);
 
                 if ($total_due < 0) {
                     $error = "Total payment exceeds the combined previous due and new total.";
                 } else {
-                    // Generate invoice number
                     $datePart = date('Ymd', strtotime($purchase_date));
                     $invoiceSql = "SELECT COUNT(*) as count FROM purchase_headers WHERE invoice_number LIKE 'PUR-$datePart%'";
                     $invoiceResult = $conn->query($invoiceSql);
                     $count = $invoiceResult->fetch_assoc()['count'] + 1;
                     $invoice_number = "PUR-$datePart" . str_pad($count, 3, '0', STR_PAD_LEFT);
 
-                    // Begin transaction
                     $conn->begin_transaction();
                     try {
-                        // Update previous due if current_payment is applied
                         if ($effective_current_payment > 0 && $previous_due > 0) {
                             $remaining_payment = $effective_current_payment;
-                            // Fetch all purchase headers with due > 0 for this seller
                             $fetchDueSql = "SELECT id, due, paid 
                                             FROM purchase_headers 
                                             WHERE seller_id = ? AND due > 0 
@@ -153,10 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['update_purchase'])) 
                                 $record_paid = $record['paid'];
                                 $record_id = $record['id'];
 
-                                // Determine how much to apply to this record
                                 $payment_to_apply = min($remaining_payment, $record_due);
-
-                                // Update the record
                                 $new_due = $record_due - $payment_to_apply;
                                 $new_paid = $record_paid + $payment_to_apply;
 
@@ -168,12 +165,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['update_purchase'])) 
                                 if (!$updatePrevDueStmt->execute()) {
                                     throw new Exception("Error updating previous due: " . $updatePrevDueStmt->error);
                                 }
+                                $updatePrevDueStmt->close();
 
                                 $remaining_payment -= $payment_to_apply;
                             }
+                            $fetchDueStmt->close();
                         }
 
-                        // Insert into purchase_headers with adjusted paid and due
                         $purchaseSql = "INSERT INTO purchase_headers (seller_id, total, paid, due, purchase_date, payment_method_id, invoice_number) 
                                         VALUES (?, ?, ?, ?, ?, ?, ?)";
                         $purchaseStmt = $conn->prepare($purchaseSql);
@@ -181,10 +179,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['update_purchase'])) 
                         if (!$purchaseStmt->execute()) {
                             throw new Exception("Error recording purchase: " . $purchaseStmt->error);
                         }
-
                         $purchase_id = $conn->insert_id;
+                        $purchaseStmt->close();
 
-                        // Insert purchase items
                         $purchaseItemSql = "INSERT INTO purchase_items (purchase_id, product_id, quantity, price, total, unit, type) 
                                             VALUES (?, ?, ?, ?, ?, ?, ?)";
                         $purchaseItemStmt = $conn->prepare($purchaseItemSql);
@@ -194,20 +191,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['update_purchase'])) 
                             $price = floatval($prices[$i]);
                             $itemTotal = $quantity * $price;
                             $unit = $units[$i];
-                            $type = ($types[$i] !== '') ? $types[$i] : null;
+                            $type = ($types[$i] !== '' && $types[$i] !== 'null') ? $types[$i] : null;
 
                             $purchaseItemStmt->bind_param("iiddsss", $purchase_id, $product_id, $quantity, $price, $itemTotal, $unit, $type);
                             if (!$purchaseItemStmt->execute()) {
-                                throw new Exception("Error recording purchase item: " . $purchaseItemStmt->error);
+                                throw new Exception("Error recording purchase item: " . $purchaseStmt->error);
                             }
                         }
+                        $purchaseItemStmt->close();
 
-                        // Insert into purchases table for legacy compatibility
                         $legacyPurchaseSql = "INSERT INTO purchases (seller_id, product_id, quantity, price, total, paid, due, purchase_date, payment_method_id, invoice_number, unit, type) 
                                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                         $legacyStmt = $conn->prepare($legacyPurchaseSql);
 
-                        // First, insert the main purchase record
                         $nullProductId = null;
                         $nullQuantity = null;
                         $nullPrice = null;
@@ -215,30 +211,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['update_purchase'])) 
                         $nullType = null;
                         $legacyStmt->bind_param("iiddsddsisss", $seller_id, $nullProductId, $nullQuantity, $nullPrice, $total, $new_paid, $due, $purchase_date, $payment_method_id, $invoice_number, $nullUnit, $nullType);
                         if (!$legacyStmt->execute()) {
-                            throw new Exception("Error recording legacy purchase: " . $conn->error);
+                            throw new Exception("Error recording legacy purchase: " . $legacyStmt->error);
                         }
 
-                        // Then insert each purchase item
                         for ($i = 0; $i < count($product_ids); $i++) {
                             $product_id = intval($product_ids[$i]);
                             $quantity = floatval($quantities[$i]);
                             $price = floatval($prices[$i]);
                             $itemTotal = $quantity * $price;
                             $unit = $units[$i];
-                            $type = ($types[$i] !== '') ? $types[$i] : null;
+                            $type = ($types[$i] !== '' && $types[$i] !== 'null') ? $types[$i] : null;
 
                             $legacyStmt->bind_param("iiddsddsisss", $seller_id, $product_id, $quantity, $price, $itemTotal, $new_paid, $due, $purchase_date, $payment_method_id, $invoice_number, $unit, $type);
                             if (!$legacyStmt->execute()) {
-                                throw new Exception("Error recording legacy purchase item: " . $conn->error);
+                                throw new Exception("Error recording legacy purchase item: " . $legacyStmt->error);
                             }
                         }
+                        $legacyStmt->close();
 
                         $conn->commit();
                         $success = "Purchase recorded successfully. Invoice Number: $invoice_number";
                         $purchaseListResult = $conn->query($purchaseListSql);
                     } catch (Exception $e) {
                         $conn->rollback();
-                        $error = $e->getMessage();
+                        $error = "Failed to record purchase: " . $e->getMessage();
                     }
                 }
             }
@@ -252,96 +248,130 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_purchase'])) {
     $seller_id = filter_input(INPUT_POST, 'seller_id', FILTER_VALIDATE_INT);
     $purchase_date = filter_input(INPUT_POST, 'purchase_date');
     $payment_method_id = filter_input(INPUT_POST, 'payment_method_id', FILTER_VALIDATE_INT);
-    $additional_paid = filter_input(INPUT_POST, 'additional_paid', FILTER_VALIDATE_FLOAT);
+    $additional_paid = filter_input(INPUT_POST, 'additional_paid', FILTER_VALIDATE_FLOAT) ?? 0;
     $current_paid = filter_input(INPUT_POST, 'current_paid', FILTER_VALIDATE_FLOAT);
     $total = filter_input(INPUT_POST, 'total', FILTER_VALIDATE_FLOAT);
+    $product_ids = $_POST['product_id'] ?? [];
+    $quantities = $_POST['quantity'] ?? [];
+    $prices = $_POST['price'] ?? [];
+    $units = $_POST['unit'] ?? [];
+    $types = $_POST['type'] ?? [];
 
-    if (!$purchase_id || !$seller_id || !$purchase_date || !$payment_method_id || $additional_paid === false || $current_paid === false || $total === false) {
+    if (!$purchase_id || !$seller_id || !$purchase_date || !$payment_method_id || $additional_paid === false || $current_paid === false || $total === false || empty($product_ids)) {
         $error = "All fields are required, and paid amounts must be valid numbers.";
     } else {
         $date = DateTime::createFromFormat('Y-m-d', $purchase_date);
         if (!$date || $date->format('Y-m-d') !== $purchase_date) {
             $error = "Invalid purchase date format.";
+        } elseif ($date > new DateTime()) {
+            $error = "Purchase date cannot be in the future.";
         } else {
+            $new_total = 0;
+            for ($i = 0; $i < count($product_ids); $i++) {
+                $quantity = floatval($quantities[$i]);
+                $price = floatval($prices[$i]);
+                if ($quantity <= 0 || $price < 0) {
+                    $error = "Quantity must be greater than 0, and price must be non-negative.";
+                    break;
+                }
+                $new_total += $quantity * $price;
+            }
+
             if (!isset($error)) {
-                // Calculate new paid amount and due amount
                 $new_paid = $current_paid + $additional_paid;
-                $due = $total - $new_paid;
+                $due = $new_total - $new_paid;
                 if ($due < 0) {
                     $error = "Total paid amount cannot exceed the grand total.";
                 } else {
                     $conn->begin_transaction();
                     try {
-                        // Fetch the invoice number to update legacy table
                         $invoiceSql = "SELECT invoice_number FROM purchase_headers WHERE id = ?";
                         $invoiceStmt = $conn->prepare($invoiceSql);
                         $invoiceStmt->bind_param("i", $purchase_id);
                         $invoiceStmt->execute();
                         $invoiceResult = $invoiceStmt->get_result();
                         $invoice_number = $invoiceResult->fetch_assoc()['invoice_number'];
+                        $invoiceStmt->close();
 
-                        // Update purchase_headers
                         $updateSql = "UPDATE purchase_headers 
-                                      SET seller_id = ?, paid = ?, due = ?, purchase_date = ?, payment_method_id = ?
+                                      SET seller_id = ?, total = ?, paid = ?, due = ?, purchase_date = ?, payment_method_id = ?
                                       WHERE id = ?";
                         $updateStmt = $conn->prepare($updateSql);
-                        $updateStmt->bind_param("iddsii", $seller_id, $new_paid, $due, $purchase_date, $payment_method_id, $purchase_id);
+                        $updateStmt->bind_param("idddsis", $seller_id, $new_total, $new_paid, $due, $purchase_date, $payment_method_id, $purchase_id);
                         if (!$updateStmt->execute()) {
                             throw new Exception("Error updating purchase: " . $updateStmt->error);
                         }
+                        $updateStmt->close();
 
-                        // Update purchases table (legacy)
+                        $deleteItemsSql = "DELETE FROM purchase_items WHERE purchase_id = ?";
+                        $deleteItemsStmt = $conn->prepare($deleteItemsSql);
+                        $deleteItemsStmt->bind_param("i", $purchase_id);
+                        if (!$deleteItemsStmt->execute()) {
+                            throw new Exception("Error deleting existing purchase items: " . $deleteItemsStmt->error);
+                        }
+                        $deleteItemsStmt->close();
+
+                        $purchaseItemSql = "INSERT INTO purchase_items (purchase_id, product_id, quantity, price, total, unit, type) 
+                                            VALUES (?, ?, ?, ?, ?, ?, ?)";
+                        $purchaseItemStmt = $conn->prepare($purchaseItemSql);
+                        for ($i = 0; $i < count($product_ids); $i++) {
+                            $product_id = intval($product_ids[$i]);
+                            $quantity = floatval($quantities[$i]);
+                            $price = floatval($prices[$i]);
+                            $itemTotal = $quantity * $price;
+                            $unit = $units[$i];
+                            $type = ($types[$i] !== '' && $types[$i] !== 'null') ? $types[$i] : null;
+
+                            $purchaseItemStmt->bind_param("iiddsss", $purchase_id, $product_id, $quantity, $price, $itemTotal, $unit, $type);
+                            if (!$purchaseItemStmt->execute()) {
+                                throw new Exception("Error recording updated purchase item: " . $purchaseItemStmt->error);
+                            }
+                        }
+                        $purchaseItemStmt->close();
+
                         $deleteLegacySql = "DELETE FROM purchases WHERE invoice_number = ?";
                         $deleteLegacyStmt = $conn->prepare($deleteLegacySql);
                         $deleteLegacyStmt->bind_param("s", $invoice_number);
                         if (!$deleteLegacyStmt->execute()) {
                             throw new Exception("Error deleting legacy purchase entries: " . $deleteLegacyStmt->error);
                         }
+                        $deleteLegacyStmt->close();
 
                         $legacyPurchaseSql = "INSERT INTO purchases (seller_id, product_id, quantity, price, total, paid, due, purchase_date, payment_method_id, invoice_number, unit, type) 
                                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                         $legacyStmt = $conn->prepare($legacyPurchaseSql);
 
-                        // Fetch existing purchase items to re-insert them
-                        $itemsSql = "SELECT * FROM purchase_items WHERE purchase_id = ?";
-                        $itemsStmt = $conn->prepare($itemsSql);
-                        $itemsStmt->bind_param("i", $purchase_id);
-                        $itemsStmt->execute();
-                        $itemsResult = $itemsStmt->get_result();
-                        $items = $itemsResult->fetch_all(MYSQLI_ASSOC);
-
-                        // Insert main purchase record
                         $nullProductId = null;
                         $nullQuantity = null;
                         $nullPrice = null;
                         $nullUnit = null;
                         $nullType = null;
-                        $legacyStmt->bind_param("iiddsddsisss", $seller_id, $nullProductId, $nullQuantity, $nullPrice, $total, $new_paid, $due, $purchase_date, $payment_method_id, $invoice_number, $nullUnit, $nullType);
+                        $legacyStmt->bind_param("iiddsddsisss", $seller_id, $nullProductId, $nullQuantity, $nullPrice, $new_total, $new_paid, $due, $purchase_date, $payment_method_id, $invoice_number, $nullUnit, $nullType);
                         if (!$legacyStmt->execute()) {
                             throw new Exception("Error updating legacy purchase: " . $legacyStmt->error);
                         }
 
-                        // Insert purchase items
-                        foreach ($items as $item) {
-                            $product_id = $item['product_id'];
-                            $quantity = $item['quantity'];
-                            $price = $item['price'];
-                            $itemTotal = $item['total'];
-                            $unit = $item['unit'];
-                            $type = $item['type'];
+                        for ($i = 0; $i < count($product_ids); $i++) {
+                            $product_id = intval($product_ids[$i]);
+                            $quantity = floatval($quantities[$i]);
+                            $price = floatval($prices[$i]);
+                            $itemTotal = $quantity * $price;
+                            $unit = $units[$i];
+                            $type = ($types[$i] !== '' && $types[$i] !== 'null') ? $types[$i] : null;
 
                             $legacyStmt->bind_param("iiddsddsisss", $seller_id, $product_id, $quantity, $price, $itemTotal, $new_paid, $due, $purchase_date, $payment_method_id, $invoice_number, $unit, $type);
                             if (!$legacyStmt->execute()) {
                                 throw new Exception("Error updating legacy purchase item: " . $legacyStmt->error);
                             }
                         }
+                        $legacyStmt->close();
 
                         $conn->commit();
                         $success = "Purchase updated successfully.";
                         $purchaseListResult = $conn->query($purchaseListSql);
                     } catch (Exception $e) {
                         $conn->rollback();
-                        $error = $e->getMessage();
+                        $error = "Failed to update purchase: " . $e->getMessage();
                     }
                 }
             }
@@ -371,18 +401,20 @@ if (isset($_GET['edit_id'])) {
             $itemsStmt->bind_param("i", $edit_id);
             $itemsStmt->execute();
             $editPurchase['items'] = $itemsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $itemsStmt->close();
         }
+        $editStmt->close();
     }
 }
 ?>
 
 <h2>Buy Products</h2>
 
-<?php if (isset($error)) { ?>
+<?php if (!empty($error)) { ?>
     <p class="error"><?php echo htmlspecialchars($error); ?></p>
 <?php } ?>
 
-<?php if (isset($success)) { ?>
+<?php if (!empty($success)) { ?>
     <p class="success"><?php echo htmlspecialchars($success); ?></p>
 <?php } ?>
 
@@ -391,9 +423,8 @@ if (isset($_GET['edit_id'])) {
 <form method="POST" action="">
     <?php if (isset($editPurchase)) { ?>
         <input type="hidden" name="update_purchase" value="1">
-        <input type="hidden" name="purchase_id" value="<?php echo $editPurchase['id']; ?>">
-        <input type="hidden" name="current_paid" value="<?php echo $editPurchase['paid']; ?>">
-        <input type="hidden" name="total" value="<?php echo $editPurchase['total']; ?>">
+        <input type="hidden" name="purchase_id" value="<?php echo htmlspecialchars($editPurchase['id']); ?>">
+        <input type="hidden" name="current_paid" value="<?php echo htmlspecialchars($editPurchase['paid']); ?>">
     <?php } ?>
     <div class="form-group">
         <label for="seller_id">Select Seller</label>
@@ -416,7 +447,7 @@ if (isset($_GET['edit_id'])) {
 
     <div class="form-group">
         <label for="purchase_date">Purchase Date</label>
-        <input type="date" name="purchase_date" id="purchase_date" value="<?php echo isset($editPurchase) ? $editPurchase['purchase_date'] : date('Y-m-d'); ?>" required>
+        <input type="date" name="purchase_date" id="purchase_date" value="<?php echo isset($editPurchase) ? htmlspecialchars($editPurchase['purchase_date']) : date('Y-m-d'); ?>" required max="<?php echo date('Y-m-d'); ?>">
     </div>
 
     <div id="product-items">
@@ -447,15 +478,15 @@ if (isset($_GET['edit_id'])) {
                     </div>
                     <div class="form-group">
                         <label for="quantity_<?php echo $index; ?>">Quantity</label>
-                        <input type="number" name="quantity[]" id="quantity_<?php echo $index; ?>" step="0.01" min="0.01" value="<?php echo $item['quantity']; ?>" readonly>
+                        <input type="number" name="quantity[]" id="quantity_<?php echo $index; ?>" step="0.01" min="0.01" value="<?php echo htmlspecialchars($item['quantity']); ?>" required oninput="calculateTotal(<?php echo $index; ?>)">
                     </div>
                     <div class="form-group">
                         <label for="price_<?php echo $index; ?>">Price</label>
-                        <input type="number" name="price[]" id="price_<?php echo $index; ?>" step="0.01" min="0" value="<?php echo $item['price']; ?>" readonly>
+                        <input type="number" name="price[]" id="price_<?php echo $index; ?>" step="0.01" min="0" value="<?php echo htmlspecialchars($item['price']); ?>" required oninput="calculateTotal(<?php echo $index; ?>)">
                     </div>
                     <div class="form-group">
                         <label for="total_<?php echo $index; ?>">Total</label>
-                        <input type="number" id="total_<?php echo $index; ?>" step="0.01" value="<?php echo $item['total']; ?>" readonly>
+                        <input type="number" id="total_<?php echo $index; ?>" step="0.01" value="<?php echo htmlspecialchars($item['total']); ?>" readonly>
                     </div>
                     <div class="form-group">
                         <label for="unit_<?php echo $index; ?>">Unit</label>
@@ -558,13 +589,13 @@ if (isset($_GET['edit_id'])) {
 
     <div class="form-group">
         <label for="grand_total">Grand Total</label>
-        <input type="number" id="grand_total" step="0.01" value="<?php echo isset($editPurchase) ? $editPurchase['total'] : '0'; ?>" readonly>
+        <input type="number" id="grand_total" step="0.01" value="<?php echo isset($editPurchase) ? htmlspecialchars($editPurchase['total']) : '0'; ?>" readonly>
     </div>
 
     <div class="form-group">
         <?php if (isset($editPurchase)) { ?>
             <label>Current Paid Amount</label>
-            <input type="number" value="<?php echo $editPurchase['paid']; ?>" readonly>
+            <input type="number" value="<?php echo htmlspecialchars($editPurchase['paid']); ?>" readonly>
             <label for="additional_paid">Add to Paid Amount</label>
             <input type="number" name="additional_paid" id="additional_paid" step="0.01" min="0" value="0" oninput="calculateDue()">
         <?php } else { ?>
@@ -577,7 +608,7 @@ if (isset($_GET['edit_id'])) {
 
     <div class="form-group">
         <label for="due">Due Amount</label>
-        <input type="number" id="due" step="0.01" value="<?php echo isset($editPurchase) ? $editPurchase['due'] : '0'; ?>" readonly>
+        <input type="number" id="due" step="0.01" value="<?php echo isset($editPurchase) ? htmlspecialchars($editPurchase['due']) : '0'; ?>" readonly>
     </div>
 
     <div class="form-group">
@@ -667,7 +698,7 @@ if (isset($_GET['edit_id'])) {
                         $itemsStmt->close();
                         $productNamesStr = implode(', ', $productNames);
                         ?>
-                        <span class="product-names" style="display: none;"><?php echo $productNamesStr; ?></span>
+                        <span class="product-names" style="display: none;"><?php echo htmlspecialchars($productNamesStr); ?></span>
                     </td>
                     <td class="purchase-date"><?php echo htmlspecialchars($purchase['purchase_date']); ?></td>
                     <td class="payment-method"><?php echo htmlspecialchars($purchase['payment_method']); ?></td>
@@ -676,8 +707,8 @@ if (isset($_GET['edit_id'])) {
                     <td class="due"><?php echo number_format($purchase['due'], 2); ?></td>
                     <td class="created-at"><?php echo htmlspecialchars($purchase['created_at']); ?></td>
                     <td class="action-buttons">
-                        <a href="buy.php?edit_id=<?php echo $purchase['id']; ?>" class="btn btn-primary">Edit</a>
-                        <a href="invoice.php?purchase_id=<?php echo $purchase['id']; ?>" class="btn btn-info">Invoice</a>
+                        <a href="invoice.php?purchase_id=<?php echo htmlspecialchars($purchase['id']); ?>" target="_blank" class="btn btn-info">Invoice</a>
+                        <a href="buy.php?edit_id=<?php echo htmlspecialchars($purchase['id']); ?>" class="btn btn-primary">Edit</a>
                     </td>
                 </tr>
             <?php } ?>
@@ -758,6 +789,7 @@ function addProductItem() {
     `;
     container.appendChild(newItem);
     productCount++;
+    updateGrandTotal();
 }
 
 function removeProductItem(button) {
@@ -772,7 +804,6 @@ function updateProductDetails(index, isEditMode) {
     const typeGroup = select.parentElement.parentElement.querySelector('.type-group');
     const priceInput = document.getElementById(`price_${index}`);
 
-    // Reset unit and type
     unitSelect.innerHTML = '<option value="">Select Unit</option>';
     typeGroup.style.display = 'none';
 
@@ -782,28 +813,19 @@ function updateProductDetails(index, isEditMode) {
         const defaultUnit = selectedOption.getAttribute('data-unit');
         const defaultPrice = parseFloat(selectedOption.getAttribute('data-price'));
 
-        // Populate unit dropdown based on category
         if (categoryUnits[category]) {
             categoryUnits[category].forEach(unit => {
                 const option = document.createElement('option');
                 option.value = unit;
                 option.text = unit;
-                if (unit === defaultUnit) {
-                    option.selected = true;
-                }
+                if (unit === defaultUnit) option.selected = true;
                 unitSelect.appendChild(option);
             });
         }
 
-        // Show type dropdown for Rod category
-        if (category === 'Rod') {
-            typeGroup.style.display = 'block';
-        }
+        if (category === 'Rod') typeGroup.style.display = 'block';
 
-        // Set price only if not in edit mode
-        if (!isEditMode) {
-            priceInput.value = defaultPrice.toFixed(2);
-        }
+        if (!isEditMode) priceInput.value = defaultPrice.toFixed(2);
         calculateTotal(index);
     }
 }
@@ -820,9 +842,7 @@ function updateGrandTotal() {
     let grandTotal = 0;
     for (let i = 0; i < productCount; i++) {
         const totalInput = document.getElementById(`total_${i}`);
-        if (totalInput) {
-            grandTotal += parseFloat(totalInput.value) || 0;
-        }
+        if (totalInput) grandTotal += parseFloat(totalInput.value) || 0;
     }
     document.getElementById('grand_total').value = grandTotal.toFixed(2);
     calculateDue();
@@ -831,24 +851,27 @@ function updateGrandTotal() {
 function calculateDue() {
     const grandTotal = parseFloat(document.getElementById('grand_total').value) || 0;
     const sellerSelect = document.getElementById('seller_id');
-    const currentPayment = parseFloat(document.getElementById('current_payment').value) || 0;
-    const paid = parseFloat(document.getElementById('paid').value) || 0;
+    let currentPayment = 0, paid = 0, additionalPaid = 0;
+
+    if (document.getElementById('current_payment')) currentPayment = parseFloat(document.getElementById('current_payment').value) || 0;
+    if (document.getElementById('paid')) paid = parseFloat(document.getElementById('paid').value) || 0;
+    if (document.getElementById('additional_paid')) additionalPaid = parseFloat(document.getElementById('additional_paid').value) || 0;
 
     let previousDue = 0;
-    if (sellerSelect.value) {
-        previousDue = parseFloat(sellerSelect.options[sellerSelect.selectedIndex].getAttribute('data-previous-due')) || 0;
-    }
+    if (sellerSelect.value) previousDue = parseFloat(sellerSelect.options[sellerSelect.selectedIndex].getAttribute('data-previous-due')) || 0;
 
-    // If no seller is selected or no payments are entered, due should match grand total
-    if (!sellerSelect.value || (currentPayment === 0 && paid === 0)) {
-        document.getElementById('due').value = grandTotal.toFixed(2);
-    } else {
+    let totalDue = 0;
+    if (document.getElementById('current_payment')) {
         const effectiveCurrentPayment = Math.min(currentPayment, previousDue);
         const excessPayment = currentPayment - effectiveCurrentPayment;
-        const totalPaid = paid + excessPayment;
-        const totalDue = (previousDue - effectiveCurrentPayment) + (grandTotal - totalPaid);
-        document.getElementById('due').value = totalDue.toFixed(2);
+        totalDue = (previousDue - effectiveCurrentPayment) + (grandTotal - (paid + excessPayment));
+    } else {
+        const currentPaid = parseFloat(document.querySelector('input[name="current_paid"]').value) || 0;
+        totalDue = grandTotal - (currentPaid + additionalPaid);
     }
+
+    totalDue = Math.max(totalDue, 0);
+    document.getElementById('due').value = totalDue.toFixed(2);
 }
 
 function fetchSellerDue() {
@@ -857,10 +880,10 @@ function fetchSellerDue() {
     if (select.value) {
         const previousDue = parseFloat(select.options[select.selectedIndex].getAttribute('data-previous-due')) || 0;
         dueDisplay.textContent = `Previous Due: ${numberFormat(previousDue)}`;
-        calculateDue(); // Recalculate due when seller changes
+        calculateDue();
     } else {
         dueDisplay.textContent = '';
-        document.getElementById('due').value = document.getElementById('grand_total').value; // Reset to grand total
+        document.getElementById('due').value = document.getElementById('grand_total').value;
     }
 }
 
@@ -881,16 +904,9 @@ function searchPurchases() {
         const paid = row.getElementsByClassName('paid')[0].textContent.toLowerCase();
         const due = row.getElementsByClassName('due')[0].textContent.toLowerCase();
 
-        if (
-            invoiceNumber.includes(filter) ||
-            sellerName.includes(filter) ||
-            productNames.includes(filter) ||
-            purchaseDate.includes(filter) ||
-            paymentMethod.includes(filter) ||
-            total.includes(filter) ||
-            paid.includes(filter) ||
-            due.includes(filter)
-        ) {
+        if (invoiceNumber.includes(filter) || sellerName.includes(filter) || productNames.includes(filter) || 
+            purchaseDate.includes(filter) || paymentMethod.includes(filter) || total.includes(filter) || 
+            paid.includes(filter) || due.includes(filter)) {
             row.style.display = '';
         } else {
             row.style.display = 'none';
@@ -898,19 +914,17 @@ function searchPurchases() {
     }
 }
 
-// Helper function for number formatting
 function numberFormat(number) {
     return number.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Initialize product items and seller due
 document.addEventListener('DOMContentLoaded', () => {
     for (let i = 0; i < productCount; i++) {
         updateProductDetails(i, <?php echo isset($editPurchase) ? 'true' : 'false'; ?>);
         calculateTotal(i);
     }
-    fetchSellerDue(); // Initialize seller due display
-    calculateDue(); // Ensure due is calculated on load
+    fetchSellerDue();
+    calculateDue();
 });
 </script>
 
@@ -1049,7 +1063,6 @@ th:last-child, td.action-buttons {
     background-color: #5a6268;
 }
 
-/* Improved Product Details Styling */
 .product-details {
     list-style: none;
     padding: 0;
@@ -1080,7 +1093,6 @@ th:last-child, td.action-buttons {
     font-size: 0.95em;
 }
 
-/* Search Bar Styling */
 .search-container {
     margin-bottom: 20px;
 }
@@ -1101,4 +1113,7 @@ th:last-child, td.action-buttons {
 }
 </style>
 
-<?php include '../includes/footer.php'; ?>
+<?php
+$conn->close();
+include '../includes/footer.php';
+?>
