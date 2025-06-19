@@ -1,0 +1,240 @@
+PHPMailer Debug [2]: SERVER -> CLIENT: 220 smtp.gmail.com ESMTP d9443c01a7336-22ac7ccbf2bsm59172985ad.245 - gsmtp
+
+PHPMailer Debug [1]: CLIENT -> SERVER: EHLO localhost
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 250-smtp.gmail.com at your service, [2401:f40:1503:fa::1002]
+250-SIZE 35882577
+250-8BITMIME
+250-STARTTLS
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+
+PHPMailer Debug [1]: CLIENT -> SERVER: STARTTLS
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 220 2.0.0 Ready to start TLS
+
+PHPMailer Debug [1]: CLIENT -> SERVER: EHLO localhost
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 250-smtp.gmail.com at your service, [2401:f40:1503:fa::1002]
+250-SIZE 35882577
+250-8BITMIME
+250-AUTH LOGIN PLAIN XOAUTH2 PLAIN-CLIENTTOKEN OAUTHBEARER XOAUTH
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+
+PHPMailer Debug [1]: CLIENT -> SERVER: AUTH LOGIN
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 334 VXNlcm5hbWU6
+
+PHPMailer Debug [1]: CLIENT -> SERVER: [credentials hidden]
+PHPMailer Debug [2]: SERVER -> CLIENT: 334 UGFzc3dvcmQ6
+
+PHPMailer Debug [1]: CLIENT -> SERVER: [credentials hidden]
+PHPMailer Debug [2]: SERVER -> CLIENT: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials d9443c01a7336-22ac7ccbf2bsm59172985ad.245 - gsmtp
+
+PHPMailer Debug [1]: SMTP ERROR: Password command failed: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials d9443c01a7336-22ac7ccbf2bsm59172985ad.245 - gsmtp
+
+PHPMailer Debug [2]: SMTP Error: Could not authenticate.
+PHPMailer Debug [1]: CLIENT -> SERVER: QUIT
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 221 2.0.0 closing connection d9443c01a7336-22ac7ccbf2bsm59172985ad.245 - gsmtp
+
+PHPMailer Debug [2]: SMTP Error: Could not authenticate.
+PHPMailer Debug [2]: SERVER -> CLIENT: 220 smtp.gmail.com ESMTP d2e1a72fcca58-73bd2336ea1sm2627100b3a.179 - gsmtp
+
+PHPMailer Debug [1]: CLIENT -> SERVER: EHLO localhost
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 250-smtp.gmail.com at your service, [2401:f40:1503:fa::1002]
+250-SIZE 35882577
+250-8BITMIME
+250-STARTTLS
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+
+PHPMailer Debug [1]: CLIENT -> SERVER: STARTTLS
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 220 2.0.0 Ready to start TLS
+
+PHPMailer Debug [1]: CLIENT -> SERVER: EHLO localhost
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 250-smtp.gmail.com at your service, [2401:f40:1503:fa::1002]
+250-SIZE 35882577
+250-8BITMIME
+250-AUTH LOGIN PLAIN XOAUTH2 PLAIN-CLIENTTOKEN OAUTHBEARER XOAUTH
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+
+PHPMailer Debug [1]: CLIENT -> SERVER: AUTH LOGIN
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 334 VXNlcm5hbWU6
+
+PHPMailer Debug [1]: CLIENT -> SERVER: [credentials hidden]
+PHPMailer Debug [2]: SERVER -> CLIENT: 334 UGFzc3dvcmQ6
+
+PHPMailer Debug [1]: CLIENT -> SERVER: [credentials hidden]
+PHPMailer Debug [2]: SERVER -> CLIENT: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials d2e1a72fcca58-73bd2336ea1sm2627100b3a.179 - gsmtp
+
+PHPMailer Debug [1]: SMTP ERROR: Password command failed: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials d2e1a72fcca58-73bd2336ea1sm2627100b3a.179 - gsmtp
+
+PHPMailer Debug [2]: SMTP Error: Could not authenticate.
+PHPMailer Debug [1]: CLIENT -> SERVER: QUIT
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 221 2.0.0 closing connection d2e1a72fcca58-73bd2336ea1sm2627100b3a.179 - gsmtp
+
+PHPMailer Debug [2]: SMTP Error: Could not authenticate.
+PHPMailer Debug [2]: SERVER -> CLIENT: 220 smtp.gmail.com ESMTP d2e1a72fcca58-73bd2336ea1sm2627552b3a.179 - gsmtp
+
+PHPMailer Debug [1]: CLIENT -> SERVER: EHLO localhost
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 250-smtp.gmail.com at your service, [2401:f40:1503:fa::1002]
+250-SIZE 35882577
+250-8BITMIME
+250-STARTTLS
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+
+PHPMailer Debug [1]: CLIENT -> SERVER: STARTTLS
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 220 2.0.0 Ready to start TLS
+
+PHPMailer Debug [1]: CLIENT -> SERVER: EHLO localhost
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 250-smtp.gmail.com at your service, [2401:f40:1503:fa::1002]
+250-SIZE 35882577
+250-8BITMIME
+250-AUTH LOGIN PLAIN XOAUTH2 PLAIN-CLIENTTOKEN OAUTHBEARER XOAUTH
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+
+PHPMailer Debug [1]: CLIENT -> SERVER: AUTH LOGIN
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 334 VXNlcm5hbWU6
+
+PHPMailer Debug [1]: CLIENT -> SERVER: [credentials hidden]
+PHPMailer Debug [2]: SERVER -> CLIENT: 334 UGFzc3dvcmQ6
+
+PHPMailer Debug [1]: CLIENT -> SERVER: [credentials hidden]
+PHPMailer Debug [2]: SERVER -> CLIENT: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials d2e1a72fcca58-73bd2336ea1sm2627552b3a.179 - gsmtp
+
+PHPMailer Debug [1]: SMTP ERROR: Password command failed: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials d2e1a72fcca58-73bd2336ea1sm2627552b3a.179 - gsmtp
+
+PHPMailer Debug [2]: SMTP Error: Could not authenticate.
+PHPMailer Debug [1]: CLIENT -> SERVER: QUIT
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 221 2.0.0 closing connection d2e1a72fcca58-73bd2336ea1sm2627552b3a.179 - gsmtp
+
+PHPMailer Debug [2]: SMTP Error: Could not authenticate.
+PHPMailer Debug [2]: SERVER -> CLIENT: 220 smtp.gmail.com ESMTP d9443c01a7336-22ac7badb24sm59429985ad.105 - gsmtp
+
+PHPMailer Debug [1]: CLIENT -> SERVER: EHLO localhost
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 250-smtp.gmail.com at your service, [2401:f40:1503:fa::1002]
+250-SIZE 35882577
+250-8BITMIME
+250-STARTTLS
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+
+PHPMailer Debug [1]: CLIENT -> SERVER: STARTTLS
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 220 2.0.0 Ready to start TLS
+
+PHPMailer Debug [1]: CLIENT -> SERVER: EHLO localhost
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 250-smtp.gmail.com at your service, [2401:f40:1503:fa::1002]
+250-SIZE 35882577
+250-8BITMIME
+250-AUTH LOGIN PLAIN XOAUTH2 PLAIN-CLIENTTOKEN OAUTHBEARER XOAUTH
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+
+PHPMailer Debug [1]: CLIENT -> SERVER: AUTH LOGIN
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 334 VXNlcm5hbWU6
+
+PHPMailer Debug [1]: CLIENT -> SERVER: [credentials hidden]
+PHPMailer Debug [2]: SERVER -> CLIENT: 334 UGFzc3dvcmQ6
+
+PHPMailer Debug [1]: CLIENT -> SERVER: [credentials hidden]
+PHPMailer Debug [2]: SERVER -> CLIENT: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials d9443c01a7336-22ac7badb24sm59429985ad.105 - gsmtp
+
+PHPMailer Debug [1]: SMTP ERROR: Password command failed: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials d9443c01a7336-22ac7badb24sm59429985ad.105 - gsmtp
+
+PHPMailer Debug [2]: SMTP Error: Could not authenticate.
+PHPMailer Debug [1]: CLIENT -> SERVER: QUIT
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 221 2.0.0 closing connection d9443c01a7336-22ac7badb24sm59429985ad.105 - gsmtp
+
+PHPMailer Debug [2]: SMTP Error: Could not authenticate.
+PHPMailer Debug [2]: SERVER -> CLIENT: 220 smtp.gmail.com ESMTP 98e67ed59e1d1-306df2fb081sm6658871a91.35 - gsmtp
+
+PHPMailer Debug [1]: CLIENT -> SERVER: EHLO localhost
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 250-smtp.gmail.com at your service, [2401:f40:1503:fa::1002]
+250-SIZE 35882577
+250-8BITMIME
+250-STARTTLS
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+
+PHPMailer Debug [1]: CLIENT -> SERVER: STARTTLS
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 220 2.0.0 Ready to start TLS
+
+PHPMailer Debug [1]: CLIENT -> SERVER: EHLO localhost
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 250-smtp.gmail.com at your service, [2401:f40:1503:fa::1002]
+250-SIZE 35882577
+250-8BITMIME
+250-AUTH LOGIN PLAIN XOAUTH2 PLAIN-CLIENTTOKEN OAUTHBEARER XOAUTH
+250-ENHANCEDSTATUSCODES
+250-PIPELINING
+250-CHUNKING
+250 SMTPUTF8
+
+PHPMailer Debug [1]: CLIENT -> SERVER: AUTH LOGIN
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 334 VXNlcm5hbWU6
+
+PHPMailer Debug [1]: CLIENT -> SERVER: [credentials hidden]
+PHPMailer Debug [2]: SERVER -> CLIENT: 334 UGFzc3dvcmQ6
+
+PHPMailer Debug [1]: CLIENT -> SERVER: [credentials hidden]
+PHPMailer Debug [2]: SERVER -> CLIENT: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials 98e67ed59e1d1-306df2fb081sm6658871a91.35 - gsmtp
+
+PHPMailer Debug [1]: SMTP ERROR: Password command failed: 535-5.7.8 Username and Password not accepted. For more information, go to
+535 5.7.8  https://support.google.com/mail/?p=BadCredentials 98e67ed59e1d1-306df2fb081sm6658871a91.35 - gsmtp
+
+PHPMailer Debug [2]: SMTP Error: Could not authenticate.
+PHPMailer Debug [1]: CLIENT -> SERVER: QUIT
+
+PHPMailer Debug [2]: SERVER -> CLIENT: 221 2.0.0 closing connection 98e67ed59e1d1-306df2fb081sm6658871a91.35 - gsmtp
+
+PHPMailer Debug [2]: SMTP Error: Could not authenticate.
